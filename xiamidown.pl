@@ -57,8 +57,8 @@ print "type = $type\n";
 
 my $url = "http://www.xiami.com/song/playlist/id/$aid/type/$type";
 
-print "Getting album.xml\n";
-system("wget $url 2>/dev/null -O album.xml");
+print "Getting xiamidown\n";
+system("wget $url 2>/dev/null -O xiamidown");
 open(xml, "wget $url 2>/dev/null -O -|");
 my @titles;
 my @locs;
