@@ -1,103 +1,424 @@
-#!/usr/bin/perl
-
-use strict;
-use warnings;
-use Getopt::Long;
-
-sub unescape {
-        my($str) = splice(@_);
-        $str =~ s/%(..)/chr(hex($1))/eg;
-        return $str;
-}
-
-sub locdecode {
-        my $loc = shift;
-        my $n = int(substr($loc, 0, 1));
-        my $left = substr($loc, 1);
-        my $slen = int(length($left) / $n);
-        my $scnt = length($left) % $n;
-        my @arr;
-        #print "orig: $loc\n";
-        #print "n: $n\n";
-        #print "slen: $slen\n";
-        foreach (0 ... $scnt-1) {
-                push(@arr, substr($left, ($slen+1)*$_, $slen+1));
-        }
-        foreach ($scnt ... $n-1) {
-                push(@arr, substr($left, $slen*($_-$scnt)+($slen+1)*$scnt, $slen));
-        }
-        #print "arr:\n";
-        #print join("\n", @arr);
-        #print "\n";
-        my $r1 = "";
-        foreach my $i (0 ... length($arr[0])-1) {
-                foreach my $j (0 ... @arr-1) {
-                        $r1 .= substr($arr[$j], $i, 1);
-                }
-        }
-        #print "before escape:$r1\n";
-        $r1 = unescape($r1);
-        $r1 =~ tr/^+/0 /;
-        $r1;
-}
-
-my $aid;
-my $dl;
-my $type;
-
-GetOptions(
-        'aid:s' => \$aid,
-        'path:s' => \$dl,
-        'type:s' => \$type
-);
-
-print "aid = $aid\n";
-print "path = $dl\n";
-print "type = $type\n";
-
-my $url = "http://www.xiami.com/song/playlist/id/$aid/type/$type";
-
-print "Getting album.xml\n";
-system("wget $url 2>/dev/null -O album.xml");
-open(xml, "wget $url 2>/dev/null -O -|");
-my @titles;
-my @locs;
-my $album;
-my $artist;
-my $picurl;
-while (<xml>) {
-        push (@titles, $1) if /^<title>/ && /\[([^\[\]]+)\]/;
-        push (@locs, &locdecode($1)) if m|^<location>(.*)</location>$|;
-        $album = $1 if /^<album_name>/ && /\[([^\[\]]+)\]/;
-        $artist = $1 if /^<artist>/ && /\[([^\[\]]+)\]/;
-        $picurl = $1 if m|^<pic>(.*)</pic>$|;
-}
-
-print "$album - $artist\n";
-print join("\n", @titles);
-print "\n";
-
-my $coverfile = "$dl/$artist/$album/cover.jpg";
-system("mkdir -p '$dl'") if (! -e "$dl");
-system("mkdir -p '$dl/$artist/'") if (! -e "$dl/$artist");
-system("mkdir -p '$dl/$artist/$album'") if (! -e "$dl/$artist/$album");
-system("wget -O '$coverfile' $picurl");
-system("echo '$aid' > '$dl/$artist/$album/aid'");
-
-for (my $i = 0; $i < @titles; $i++) {
-        my $track = $i + 1;
-        my $title = $titles[$i];
-        my $loc = $locs[$i];
-        my $path1 = "$dl/$artist/$album";
-        my $path2 = "$title.mp3";
-        
-        print "getting #$track - $title\n";
-        my @s = stat($path2);
-        if (!$s[7] || $s[7] < 1000) {
-                system("aria2c -s 2 --dir=$path1 --out=$path2 $loc");
-                system("mp3info -a '$artist' -t '$title' -l '$album' -n $track '$path1/$path2'");
-        } else {
-                print "skipped $path1/$path2\n";
-                system("mp3info -F \"APIC < '$coverfile'\" '$path1/$path2'");
-        }
-}
+<?xml version="1.0" encoding="utf-8"?>
+<playlist version="1" xmlns="http://xspf.org/ns/0/">
+<trackList>
+<track>
+<title><![CDATA[加格达奇的夜车]]></title>
+<song_id>1770692691</song_id>
+<album_id>483904</album_id>
+<album_name><![CDATA[家在北极村]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升;左小祖咒]]></artist>
+<location>7h%1.18%_63.t2.n132192mtFxe99F729pp%it%%%7683%2a%255%953Fm2FEE512AfiF441E_9</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/91/1770692691_1324953897.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/4839041337164118_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[二十年以前]]></title>
+<song_id>1769548314</song_id>
+<album_id>383268</album_id>
+<album_name><![CDATA[P.S. 是的，我在台北。]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>4h%2Fxit123%5215135.t3Ffi.%1F22%%7444%mtA%1an2936F2568_95pp%2.meF%8815E9318E3</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/14/1769548314_1276279607.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img0//3832681277115366_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[流星小夜曲]]></title>
+<song_id>5419</song_id>
+<album_id>450</album_id>
+<album_name><![CDATA[滚石香港黄金十年 陈升精选]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>8h2xt22%1.tFi%FF5%mt%a241E5pp2mF525E3%Fi1%%463f.15219A1n9E596%.e%%2_5</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/19/5419_1300593208.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/450_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[如风的少年]]></title>
+<song_id>384437</song_id>
+<album_id>468</album_id>
+<album_name><![CDATA[私奔]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>6hAFat51E1_Et%fm%E%3714t21i255%%1.pF..F%E257m%%xn32%FE%p32ie%F51453</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/384437.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/468_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[红色气球]]></title>
+<song_id>384436</song_id>
+<album_id>468</album_id>
+<album_name><![CDATA[私奔]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>7h%1.3FE71mt2.n%13%7ptFxe5%%5%3p%itE52E5%2a%5EF3E3Fm2%%1_3AfiF2511.</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/384436.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/468_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[然而]]></title>
+<song_id>384473</song_id>
+<album_id>32407</album_id>
+<album_name><![CDATA[魔鬼的情诗 I 1988-1994]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>7h%1.3FE71mt2.n%1647ptFxe5%%%43p%itE525%%2a%5EFE53Fm2%%1_EAfiF2511.</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/73/384473_1260871770.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/32407_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[凄美灯塔]]></title>
+<song_id>192792</song_id>
+<album_id>15696</album_id>
+<album_name><![CDATA[新宝岛康乐队 第3辑]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[新宝岛康乐队]]></artist>
+<location>4h%2Fxit3%5%5193%.t3Ffi.%1262E9275mtA%1an23F9F62_7Epp%2.meF216%_73233</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://www.xiami.com/song/lyrictxt/id/192792</lyric>
+<pic>http://img.xiami.com/images/album/img32/3132/15696_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[多情兄]]></title>
+<song_id>192810</song_id>
+<album_id>15698</album_id>
+<album_name><![CDATA[新宝岛康乐队]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[新宝岛康乐队]]></artist>
+<location>6hAFat35F153pt%fm%26%9E63t21i2%952_9pF..F28E831%%xn3F%115.32ie112_%2m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/3132/15698/192810.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img0//156981292554837_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[车轮埔]]></title>
+<song_id>192770</song_id>
+<album_id>15694</album_id>
+<album_name><![CDATA[第树辑]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[新宝岛康乐队]]></artist>
+<location>4h%2Fxit3%5%517_4.t3Ffi.%1262E9%34mtA%1an23F9F72525pp%2.meF214%_7E963</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://www.xiami.com/song/lyrictxt/id/192770</lyric>
+<pic>http://img.xiami.com/images/album/img32/3132/156941315536770_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[六月]]></title>
+<song_id>384369</song_id>
+<album_id>460</album_id>
+<album_name><![CDATA[六月]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>7h%1.3F113t2.n%916tFxe5963p%itE636%2a%5%6.3Fm2%2_mAfiF2F1p</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/69/384369_1282877328.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/4601318041349_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[凡人的告白书]]></title>
+<song_id>384417</song_id>
+<album_id>471</album_id>
+<album_name><![CDATA[拥挤的乐园]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>6hAFat51E11pt%fm%E%1663t21i255%88pF..F%E244%%xn32%F_.32ie%F511m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/17/384417_1298430422.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/4711316538149_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[别让我哭]]></title>
+<song_id>384370</song_id>
+<album_id>467</album_id>
+<album_name><![CDATA[别让我哭]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>5h3%.i%5F236ptA2x.2E9F733t%FinF591_7p2fae3%711.%F1mt%2%61m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/70/384370_1259495458.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/467_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[北京一夜]]></title>
+<song_id>5411</song_id>
+<album_id>450</album_id>
+<album_name><![CDATA[滚石香港黄金十年 陈升精选]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升;刘佳慧]]></artist>
+<location>6hAFat9%%545.t%fm%%5521Emt21i22EE%16ppF..FF%45_93%%xn142%E1532ie15F25%7</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/11/5411_1299209480.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/450_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[牡丹亭外]]></title>
+<song_id>3468491</song_id>
+<album_id>312883</album_id>
+<album_name><![CDATA[美丽的邂逅]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>8h2xt2%264tFi%F2588t%a23F241p2mF1%%96%Fi12551.3f.18EE_mA1n98732p%.e%3%473</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/91/3468491_1353339416.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/3128831331776825_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[镜子]]></title>
+<song_id>5393</song_id>
+<album_id>449</album_id>
+<album_name><![CDATA[魔鬼A春天]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>5h3%.i%94%2E_1tA2x.2%95559.t%FinF2%E236mp2fae1F26%92p%F1mt14F%5323</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/119/449/5393.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/449_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[关于男人]]></title>
+<song_id>5573</song_id>
+<album_id>462</album_id>
+<album_name><![CDATA[陈升Bobby's Talk 关于男人]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>4h%2Fxit122%%%5533t3Ffi.%1F%52577.tA%1an2942E5E37mp%2.meF%6F825_9p</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/19/119/5573.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/462_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[不再让你孤单]]></title>
+<song_id>5409</song_id>
+<album_id>450</album_id>
+<album_name><![CDATA[滚石香港黄金十年 陈升精选]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>4h%2Fxit12%2E5E516.t3Ffi.%1F5F225E%9mtA%1an294E%%%4955pp%2.meF%5%525%_E53</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/9/5409_1323407179.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/450_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[把悲伤留给自己]]></title>
+<song_id>5384</song_id>
+<album_id>449</album_id>
+<album_name><![CDATA[魔鬼A春天]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>9hFaF924pt%m1%5_3t2i1229pF.9F%6%fn%15231e2%E1A.tF552%x%4E3.2i24%8m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/84/5384_1300366979.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/449_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[拥挤的乐园]]></title>
+<song_id>384415</song_id>
+<album_id>471</album_id>
+<album_name><![CDATA[拥挤的乐园]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>5h3%.i%5F%286ptA2x.2E15F283t%FinF5%E1_2p2fae3%5111.%F1mt%2E%61m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/15/384415_1254638960.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/4711316538149_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[鼓声若响]]></title>
+<song_id>1769434876</song_id>
+<album_id>373942</album_id>
+<album_name><![CDATA[色情男女 电影原声大碟]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[新宝岛康乐队]]></artist>
+<location>9hFaF727_9t%m73%61.t2i19292mpF.54541p%fn82235333e%%%4%A.t22585%x%FFE7E2i231168</location>
+<ms>http://f3.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/76/1769434876_1290522139.txt</lyric>
+<pic>http://img.xiami.com/images/album/img0//3739421269554518_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[Summer]]></title>
+<song_id>5410</song_id>
+<album_id>450</album_id>
+<album_name><![CDATA[滚石香港黄金十年 陈升精选]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>6hAFat9%%5415t%fm%%5521%6t21i22EE%%5.pF..FF%355Em%%xn142%EE6p32ie15F25_93</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/19/119/5410.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/450_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[欢聚歌]]></title>
+<song_id>378537</song_id>
+<album_id>15692</album_id>
+<album_name><![CDATA[第6发]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[新宝岛康乐队]]></artist>
+<location>9hFaF15mt%m1%5pt2i2263pF.7F_%fn%2531e2%5A.tF25%x%4F62i275.</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/32/3132/378537.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img32/3132/15692_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[风筝]]></title>
+<song_id>386995</song_id>
+<album_id>465</album_id>
+<album_name><![CDATA[风筝]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>6hAFat51F53pt%fm%E21E%3t21i2514_5pF..F%631E%%xn32%34.32ie%F2%3m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/95/386995_1323407707.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/465_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[最后一次温柔]]></title>
+<song_id>5414</song_id>
+<album_id>450</album_id>
+<album_name><![CDATA[滚石香港黄金十年 陈升精选]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>5h3%.i%9527%15%ptA2x.2%%F%54E53t%FinF25%2E_6Ep2fae1FE55519.%F1mt14%E24%6m</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/119/450/5414.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/450_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[二十岁的眼泪（live）]]></title>
+<song_id>384335</song_id>
+<album_id>451</album_id>
+<album_name><![CDATA[My Destiny]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>5h3%.i%5F2%1E3tA2x.2E9F512t%FinF591E6.p2fae3%312%m%F1mt%2%6_5p</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/upload/35/384335_1254473568.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/451_1.jpg</pic>
+</track>
+<track>
+<title><![CDATA[20岁的眼泪]]></title>
+<song_id>386994</song_id>
+<album_id>465</album_id>
+<album_name><![CDATA[风筝]]></album_name>
+<object_id>14504840</object_id>
+<object_name>collect</object_name>
+<insert_type>1</insert_type>
+<background>#eeeeee</background>
+<grade>-1</grade>
+<artist><![CDATA[陈升]]></artist>
+<location>9hFaF13.t%m322mt2i%19ppF.56_3%fnE%131e524A.t%F3%x%2122i2F49</location>
+<ms>http://f1.xiami.net</ms>
+<lyric>http://img.xiami.com/./lyric/119/465/386994.lrc</lyric>
+<pic>http://img.xiami.com/images/album/img19/119/465_1.jpg</pic>
+</track>
+</trackList>
+<type>collect</type>
+<type_id>14504840</type_id>
+<clearlist></clearlist>
+</playlist>
